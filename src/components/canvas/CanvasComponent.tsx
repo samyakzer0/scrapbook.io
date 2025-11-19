@@ -2,7 +2,7 @@ import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 're
 import { Canvas, FabricImage, IText, Point, Rect } from 'fabric';
 import { soundManager } from '../../utils/soundManager';
 import type { Template } from '../../data/templates';
-import { textStyles, type TextStyle } from '../../data/textStyles';
+import type { TextStyle } from '../../data/textStyles';
 import TextStylesModal from '../ui/TextStylesModal';
 import './CanvasComponent.css';
 
@@ -583,74 +583,67 @@ const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentProps>((pr
   const addTextWithStyle = (style: TextStyle) => {
     if (!fabricCanvasRef.current) return;
 
-    // Small delay to ensure modal is closed and canvas is ready
-    setTimeout(() => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-      
-      // Get current viewport center
-      const zoom = canvas.getZoom();
-      const vpt = canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
-      const centerX = (canvas.width! / 2 - vpt[4]) / zoom;
-      const centerY = (canvas.height! / 2 - vpt[5]) / zoom;
-      
-      const text = new IText('Add your text here', {
-        left: centerX,
-        top: centerY,
-        originX: 'center',
-        originY: 'center',
-        fontFamily: style.fontFamily,
-        fontSize: style.fontSize,
-        fill: style.fill,
-        stroke: style.stroke,
-        strokeWidth: style.strokeWidth,
-        fontWeight: style.fontWeight as any,
-        fontStyle: style.fontStyle,
-        shadow: style.shadow as any,
-        editable: true,
-        selectable: true,
-      });
+    const canvas = fabricCanvasRef.current;
+    
+    // Get current viewport center
+    const zoom = canvas.getZoom();
+    const vpt = canvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+    const centerX = (canvas.width! / 2 - vpt[4]) / zoom;
+    const centerY = (canvas.height! / 2 - vpt[5]) / zoom;
+    
+    const text = new IText('Add your text here', {
+      left: centerX,
+      top: centerY,
+      originX: 'center',
+      originY: 'center',
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fill: style.fill,
+      stroke: style.stroke,
+      strokeWidth: style.strokeWidth,
+      fontWeight: style.fontWeight as any,
+      fontStyle: style.fontStyle,
+      shadow: style.shadow as any,
+      editable: true,
+      selectable: true,
+    });
 
-      // Add hold-to-delete functionality for text
-      let holdTimer: number | null = null;
-      
-      text.on('mousedown', () => {
-        holdTimer = window.setTimeout(() => {
-          if (window.confirm('Delete this text?')) {
-            canvas.remove(text);
-            canvas.renderAll();
-            saveHistory();
-          }
-        }, 1000); // 1 second hold
-      });
-
-      text.on('mouseup', () => {
-        if (holdTimer) {
-          clearTimeout(holdTimer);
-          holdTimer = null;
+    // Add hold-to-delete functionality for text
+    let holdTimer: number | null = null;
+    
+    text.on('mousedown', () => {
+      holdTimer = window.setTimeout(() => {
+        if (window.confirm('Delete this text?')) {
+          canvas.remove(text);
+          canvas.renderAll();
+          saveHistory();
         }
-      });
+      }, 1000); // 1 second hold
+    });
 
-      text.on('mousemove', () => {
-        if (holdTimer) {
-          clearTimeout(holdTimer);
-          holdTimer = null;
-        }
-      });
+    text.on('mouseup', () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    });
 
-      canvas.add(text);
-      canvas.setActiveObject(text);
-      canvas.renderAll();
-      
-      // Enter editing mode after a small delay
-      setTimeout(() => {
-        text.enterEditing();
-        text.selectAll();
-        canvas.renderAll();
-      }, 50);
-      
-      saveHistory();
-    }, 100);
+    text.on('mousemove', () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    });
+
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    canvas.renderAll();
+    
+    // Enter editing mode
+    text.enterEditing();
+    text.selectAll();
+    
+    saveHistory();
   };
 
   const randomizeLayout = () => {
@@ -726,15 +719,6 @@ const CanvasComponent = forwardRef<CanvasComponentRef, CanvasComponentProps>((pr
     if (zoom < 0.01) zoom = 0.01;
     canvas.setZoom(zoom);
     setZoomLevel(Math.round(zoom * 100));
-    canvas.renderAll();
-  };
-
-  const handleResetZoom = () => {
-    if (!fabricCanvasRef.current) return;
-    const canvas = fabricCanvasRef.current;
-    canvas.setZoom(1);
-    setZoomLevel(100);
-    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
     canvas.renderAll();
   };
 
